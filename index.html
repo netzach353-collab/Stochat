@@ -1208,6 +1208,151 @@ async function renderPrivateList() {
   if (listEl) listEl.innerHTML = list;
 }
 
+/* ===== מסך מנהל: כל השיחות הפרטיות ===== */
+
+async function renderAdminChats() {
+  view = { name: 'admin', id: null };
+
+  app.innerHTML =
+    '<div class="app">' +
+      '<main class="main">' +
+        '<div class="page-head">' +
+          '<div>' +
+            '<h2>ניהול צ׳אטים פרטיים</h2>' +
+            '<p class="muted">כל השיחות השמורות בסופרבייס</p>' +
+          '</div>' +
+          '<button type="button" class="btn-primary sm" id="adminLogout">' +
+            'יציאה' +
+          '</button>' +
+        '</div>' +
+        '<div id="adminChatsList" class="chat-list">' +
+          '<div class="empty">טוען את כל השיחות...</div>' +
+        '</div>' +
+      '</main>' +
+    '</div>';
+
+  var result = await supabaseClient
+    .from('private_chats')
+    .select('*')
+    .order('last_message_at', { ascending: false });
+
+  if (view.name !== 'admin') return;
+
+  var list = document.getElementById('adminChatsList');
+  if (!list) return;
+
+  if (result.error) {
+    console.error('שגיאה בטעינת כל השיחות:', result.error);
+    list.innerHTML =
+      '<div class="empty">לא ניתן לטעון את השיחות. בדוק את הרשאות המנהל בסופרבייס.</div>';
+    return;
+  }
+
+  var chats = result.data || [];
+
+  if (!chats.length) {
+    list.innerHTML = '<div class="empty">לא נמצאו שיחות פרטיות.</div>';
+    return;
+  }
+
+  list.innerHTML = chats.map(function (chat) {
+    var nameA = chat.user_a_name || 'משתמש א׳';
+    var nameB = chat.user_b_name || 'משתמש ב׳';
+
+    return (
+      '<button type="button" class="chat-item" ' +
+        'data-admin-open-chat="' + esc(chat.id) + '">' +
+        '<div class="avatar">' + esc(nameA.charAt(0)) + '</div>' +
+        '<div class="chat-item-main">' +
+          '<div class="chat-item-name">' +
+            esc(nameA) + ' ↔ ' + esc(nameB) +
+          '</div>' +
+          '<div class="chat-item-last">' +
+            'מזהה שיחה: ' + esc(chat.id) +
+          '</div>' +
+        '</div>' +
+        '<div class="chat-item-time">' +
+          (chat.last_message_at ? fmtDate(new Date(chat.last_message_at).getTime()) : '') +
+        '</div>' +
+      '</button>'
+    );
+  }).join('');
+}
+
+
+/* ===== צפייה בהודעות של שיחה ===== */
+
+async function renderAdminChatMessages(chatId) {
+  view = { name: 'adminChat', id: chatId };
+
+  app.innerHTML =
+    '<div class="app">' +
+      '<main class="main">' +
+        '<div class="page-head">' +
+          '<div>' +
+            '<h2>הודעות השיחה</h2>' +
+            '<p class="muted">מנהל · צפייה בשיחה פרטית</p>' +
+          '</div>' +
+          '<button type="button" class="btn-primary sm" id="adminBackToChats">' +
+            'חזרה לשיחות' +
+          '</button>' +
+        '</div>' +
+        '<div id="adminMessagesList" class="room-list">' +
+          '<div class="empty">טוען הודעות...</div>' +
+        '</div>' +
+      '</main>' +
+    '</div>';
+
+  var result = await supabaseClient
+    .from('private_messages')
+    .select('*')
+    .eq('chat_id', chatId)
+    .order('created_at', { ascending: true });
+
+  if (view.name !== 'adminChat' || view.id !== chatId) return;
+
+  var list = document.getElementById('adminMessagesList');
+  if (!list) return;
+
+  if (result.error) {
+    console.error('שגיאה בטעינת הודעות מנהל:', result.error);
+    list.innerHTML =
+      '<div class="empty">לא ניתן לטעון את ההודעות. בדוק את מדיניות ההרשאות.</div>';
+    return;
+  }
+
+  var messages = result.data || [];
+
+  if (!messages.length) {
+    list.innerHTML = '<div class="empty">אין הודעות בשיחה הזאת.</div>';
+    return;
+  }
+
+  list.innerHTML = messages.map(function (message) {
+    var date = message.created_at
+      ? new Date(message.created_at)
+      : null;
+
+    return (
+      '<div class="room-card">' +
+        '<div class="room-info">' +
+          '<div class="room-title">' +
+            esc(message.sender_name || 'משתמש') +
+          '</div>' +
+          '<div class="room-desc" style="white-space:pre-wrap;overflow-wrap:anywhere">' +
+            esc(message.content || '') +
+          '</div>' +
+          '<div class="room-meta">' +
+            (date && !isNaN(date.getTime())
+              ? esc(date.toLocaleString('he-IL'))
+              : '') +
+          '</div>' +
+        '</div>' +
+      '</div>'
+    );
+  }).join('');
+}
+
 
   
 async function renderPrivateChat(chatId) {
@@ -1607,6 +1752,35 @@ function updateLiveUsersList() {
   
   function go(name, id) { view = { name: name, id: id || null }; render(); }
 
+  
+/* ===== פעולות מסך המנהל ===== */
+
+document.addEventListener('click', async function (event) {
+  var target = event.target.closest(
+    '#adminLogout, #adminBackToChats, [data-admin-open-chat]'
+  );
+
+  if (!target) return;
+
+  if (target.id === 'adminLogout') {
+    await supabaseClient.auth.signOut();
+    clearSession();
+    view = { name: 'login', id: null };
+    renderLogin();
+    return;
+  }
+
+  if (target.id === 'adminBackToChats') {
+    renderAdminChats();
+    return;
+  }
+
+  if (target.hasAttribute('data-admin-open-chat')) {
+    renderAdminChatMessages(target.dataset.adminOpenChat);
+  }
+});
+
+  
   /* ---------- Events ---------- */
   document.addEventListener('click', function (e) {
     var t = e.target.closest('[data-nav],[data-open-room],[data-open-chat],[data-author-id],[data-live-user-id],[data-logout],[data-new-room],[data-close-modal]');
@@ -1956,13 +2130,57 @@ startPresence();
     if (e.key && e.key.indexOf('stochat_') === 0) render();
   });
 
-  
-  if (getSession()) {
-  startPresence();
-  loadRoomsFromSupabase();
-} else {
-  render();
+/* ===== אתחול האתר וזיהוי מנהל Google ===== */
+
+async function initializeApp() {
+  try {
+    var authResult = await supabaseClient.auth.getSession();
+
+    if (authResult.error) {
+      throw authResult.error;
+    }
+
+    var authSession = authResult.data.session;
+
+    // בודקים את הרשאת המנהל מול פונקציית Supabase הקיימת
+    if (authSession && authSession.user) {
+      var adminResult = await supabaseClient.rpc('is_admin');
+
+      if (adminResult.error) {
+        console.error(
+          'בדיקת הרשאת מנהל נכשלה:',
+          adminResult.error
+        );
+      } else if (adminResult.data === true) {
+        await renderAdminChats();
+        return;
+      }
+    }
+
+    // אם זה לא מנהל, ממשיכים במסלול הרגיל של האתר
+    if (getSession()) {
+      view = { name: 'rooms', id: null };
+      startPresence();
+      await loadRoomsFromSupabase();
+    } else {
+      render();
+    }
+
+  } catch (error) {
+    console.error('שגיאה באתחול האתר:', error);
+
+    // לא מוחקים סשן קיים בגלל שגיאת רשת זמנית
+    if (getSession()) {
+      view = { name: 'rooms', id: null };
+      render();
+    } else {
+      render();
+    }
+  }
 }
+
+initializeApp();
+
 
 })();
 
