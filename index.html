@@ -380,7 +380,26 @@ button.avatar:hover{background:#ddd6fe}
 #backFromLive:hover {
   background: #e5e7eb;
 }
+/* תיקון גלילה ברשימת החדרים והעמודים הרגילים */
+.app:not(:has(.chat)) {
+  height: auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow: visible;
+}
 
+.app:not(:has(.chat)) .main {
+  flex: 1 0 auto;
+  min-height: 0;
+  overflow: visible;
+}
+
+html,
+body {
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
 </style>
 </head>
 <body>
@@ -1841,26 +1860,45 @@ async function loadRoomsFromSupabase() {
   
 
 
-var roomsRealtimeChannel = null;
+var roomsBroadcastChannel = null;
 
 function listenToRoomsRealtime() {
-  if (roomsRealtimeChannel) return;
+  if (roomsBroadcastChannel) return;
 
-  roomsRealtimeChannel = supabaseClient
-    .channel('rooms-list-realtime')
+  roomsBroadcastChannel = supabaseClient
+    .channel('rooms-list-broadcast')
     .on(
-      'postgres_changes',
-      {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'rooms'
-      },
-      async function () {
-        await loadRoomsFromSupabase();
+      'broadcast',
+      { event: 'new-room' },
+      function (message) {
+        var row = message.payload;
+        if (!row || !row.id) return;
+
+        var rooms = read(KEYS.rooms, []);
+
+        if (rooms.some(function (r) {
+          return String(r.id) === String(row.id);
+        })) return;
+
+        rooms.unshift({
+          ...row,
+          created_date: row.created_at
+            ? new Date(row.created_at).getTime()
+            : Date.now(),
+          creator_name: row.creator_name || 'אורח',
+          creator_age: row.creator_age || '',
+          description: row.description || ''
+        });
+
+        write(KEYS.rooms, rooms);
+
+        if (view && view.name === 'rooms') {
+          renderRooms();
+        }
       }
     )
     .subscribe(function (status, err) {
-      console.log('Realtime של נושאים:', status, err || '');
+      console.log('האזנת נושאים:', status, err || '');
     });
 }
 
