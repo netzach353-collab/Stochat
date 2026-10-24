@@ -1,0 +1,1971 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#7c3aed" />
+<title>סטוצ'אט — צ'אט אנונימי</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--violet:#7c3aed;--fuchsia:#c026d3;--bg:#f8fafc;--border:#e2e8f0;--text:#0f172a;--muted:#64748b;--mutedbg:#f1f5f9}
+html,body{height:100%}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Rubik',Arial,sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased;font-size:15px;line-height:1.5}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+input,textarea{font:inherit;color:inherit}
+input:focus,textarea:focus{outline:none}
+#app{min-height:100%}
+svg{display:block}
+.app{min-height:100vh;display:flex;flex-direction:column}
+.main{flex:1;width:100%;max-width:720px;margin:0 auto;padding:16px}
+.muted{color:var(--muted)}
+.err{color:#ef4444;font-size:13px;margin-top:8px}
+.empty{text-align:center;color:var(--muted);padding:40px 16px;font-size:14px;line-height:1.7}
+
+.header{position:sticky;top:0;z-index:20;background:#fff;border-bottom:1px solid var(--border)}
+.header-inner{max-width:720px;margin:0 auto;height:56px;padding:0 12px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.brand{display:inline-flex;align-items:center;gap:8px;font-weight:800;flex-shrink:0}
+.brand-logo{width:32px;height:32px;border-radius:10px;background:linear-gradient(135deg,var(--violet),var(--fuchsia));display:grid;place-items:center;color:#fff;box-shadow:0 2px 6px rgba(124,58,237,.3)}
+.brand-name{display:none}
+@media(min-width:480px){.brand-name{display:inline}}
+.nav{display:flex;gap:4px;background:var(--mutedbg);border-radius:999px;padding:4px}
+.nav-btn{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;font-size:13px;font-weight:600;color:var(--muted);white-space:nowrap;transition:.15s}
+.nav-btn.active{background:#fff;color:var(--violet);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.user{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.user-name{display:none;font-size:13px;color:#475569}
+@media(min-width:520px){.user-name{display:inline}}
+.user-avatar{width:28px;height:28px;border-radius:999px;background:#ede9fe;color:#6d28d9;display:none;place-items:center;font-size:12px;font-weight:700}
+@media(min-width:520px){.user-avatar{display:grid}}
+.icon-btn{width:32px;height:32px;border-radius:999px;display:grid;place-items:center;color:#94a3b8;transition:.15s}
+.icon-btn:hover{background:var(--mutedbg);color:var(--text)}
+.logout:hover{background:#fef2f2;color:#ef4444}
+
+.page-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 0}
+.page-head h2{font-size:20px;font-weight:800}
+.page-head p{font-size:13.5px;margin-top:2px}
+.btn-primary{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:14px;border-radius:12px;background:linear-gradient(135deg,var(--violet),var(--fuchsia));color:#fff;font-weight:700;box-shadow:0 8px 20px rgba(124,58,237,.3);transition:.15s;width:100%}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 12px 24px rgba(124,58,237,.38)}
+.btn-primary:disabled{opacity:.5;transform:none;box-shadow:none}
+.btn-primary.sm{width:auto;padding:9px 16px;font-size:13.5px;border-radius:999px;box-shadow:0 4px 12px rgba(124,58,237,.28)}
+.btn-ghost{padding:14px 18px;border-radius:12px;background:var(--mutedbg);color:#475569;font-weight:600}
+
+.room-list{display:flex;flex-direction:column;gap:10px;margin-top:16px}
+.room-card{display:flex;gap:12px;align-items:center;text-align:right;background:#fff;border:1px solid var(--border);border-radius:16px;padding:14px;transition:.15s;width:100%}
+.room-card:hover{border-color:#ddd6fe;box-shadow:0 6px 18px rgba(124,58,237,.1);transform:translateY(-1px)}
+.room-ic{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#ede9fe,#fae8ff);color:#7c3aed;font-weight:800;font-size:18px;display:grid;place-items:center;flex-shrink:0}
+.room-info{flex:1;min-width:0}
+.room-title{font-weight:700;font-size:15.5px}
+.room-desc{color:var(--muted);font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.room-meta{color:#94a3b8;font-size:12px;margin-top:2px}
+
+.chat-head{display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--border);background:#fff}
+.chat-head-info{min-width:0}
+.chat-head-title{font-weight:800;font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chat-head-sub{color:var(--muted);font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.composer input{flex:1;padding:10px 16px;border:1px solid var(--border);border-radius:999px;background:#fff;min-width:0}
+.composer input:focus{border-color:var(--violet);box-shadow:0 0 0 3px rgba(124,58,237,.15)}
+.send-btn{width:40px;height:40px;border-radius:999px;background:linear-gradient(135deg,var(--violet),var(--fuchsia));color:#fff;display:grid;place-items:center;flex-shrink:0;transition:.15s}
+.send-btn:hover{transform:scale(1.06)}
+.send-btn:disabled{opacity:.4;transform:none}
+
+.msg{display:flex;gap:10px;align-items:flex-start}
+.msg.mine{flex-direction:row-reverse}
+.avatar{width:34px;height:34px;border-radius:999px;background:#ede9fe;color:#6d28d9;font-weight:700;font-size:13px;display:grid;place-items:center;flex-shrink:0;transition:.15s}
+button.avatar:hover{background:#ddd6fe}
+.msg-body{background:#fff;border:1px solid var(--border);border-radius:14px 4px 14px 14px;padding:8px 12px;max-width:82%}
+.msg.mine .msg-body{border-radius:4px 14px 14px 14px;background:#f5f3ff;border-color:#ddd6fe}
+.msg-head{display:flex;align-items:center;gap:6px;margin-bottom:2px}
+.msg-name{font-size:12.5px;font-weight:700;color:#334155}
+.msg-age{font-size:11px;color:var(--violet);background:#ede9fe;border-radius:999px;padding:0 6px}
+.msg-time{font-size:11px;color:#94a3b8;margin-inline-start:auto}
+.msg-text{font-size:14.5px;word-break:break-word;white-space:pre-wrap}
+
+.chat-list{display:flex;flex-direction:column;gap:10px;margin-top:16px}
+.chat-item{display:flex;gap:12px;align-items:center;background:#fff;border:1px solid var(--border);border-radius:16px;padding:14px;width:100%;text-align:right;transition:.15s}
+.chat-item:hover{border-color:#ddd6fe;box-shadow:0 6px 18px rgba(124,58,237,.1);transform:translateY(-1px)}
+.chat-item .avatar{width:44px;height:44px;font-size:16px}
+.chat-item-main{flex:1;min-width:0}
+.chat-item-name{font-weight:700;font-size:15.5px}
+.chat-item-last{color:var(--muted);font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chat-item-time{color:#94a3b8;font-size:11.5px;align-self:flex-start}
+
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:16px;background:linear-gradient(135deg,#7c3aed,#9333ea,#c026d3);position:relative;overflow:hidden}
+.blob{position:absolute;border-radius:50%;filter:blur(70px)}
+.blob.b1{width:340px;height:340px;background:rgba(255,255,255,.16);top:-90px;right:-90px}
+.blob.b2{width:340px;height:340px;background:rgba(240,171,252,.35);bottom:-90px;left:-90px}
+.login-card{position:relative;width:100%;max-width:420px;background:rgba(255,255,255,.97);backdrop-filter:blur(12px);border-radius:24px;padding:32px;box-shadow:0 24px 60px rgba(0,0,0,.25)}
+.login-logo{width:64px;height:64px;margin:0 auto 16px;border-radius:20px;background:linear-gradient(135deg,var(--violet),var(--fuchsia));display:grid;place-items:center;color:#fff;box-shadow:0 10px 24px rgba(124,58,237,.4)}
+.login-card h1{text-align:center;font-size:28px;font-weight:800}
+.login-sub{text-align:center;color:var(--muted);margin:4px 0 24px;font-size:14px}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:13px;font-weight:600;color:#334155;margin-bottom:8px}
+.field input{width:100%;padding:12px 16px;border:1px solid var(--border);border-radius:12px;background:#fff;transition:.15s}
+.field input:focus{border-color:var(--violet);box-shadow:0 0 0 3px rgba(124,58,237,.15)}
+.login-foot{margin-top:22px;display:flex;align-items:center;justify-content:center;gap:8px;color:#94a3b8;font-size:13px}
+
+.overlay{position:fixed;inset:0;background:rgba(15,23,42,.5);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50}
+.modal-card{width:100%;max-width:420px;background:#fff;border-radius:20px;padding:24px;box-shadow:0 24px 60px rgba(0,0,0,.3)}
+.modal-card h3{font-size:18px;font-weight:800;margin-bottom:16px}
+.modal-card textarea{width:100%;padding:12px 16px;border:1px solid var(--border);border-radius:12px;resize:none;transition:.15s}
+.modal-card textarea:focus{border-color:var(--violet);box-shadow:0 0 0 3px rgba(124,58,237,.15)}
+.modal-actions{display:flex;gap:8px;margin-top:16px}
+.modal-actions .btn-primary{flex:1}
+  .app {
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.chat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: auto;
+  max-width: 720px;
+  width: 100%;
+  margin: 0 auto;
+  overflow: hidden;
+}
+
+.messages {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+  
+  .chat {
+  width: 100%;
+  max-width: 720px;
+  min-width: 0;
+  box-sizing: border-box;
+  margin: 0 auto;
+    
+}
+
+.chat-head,
+.messages,
+.composer {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.composer input {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  position: relative;
+  bottom: 30px;
+}
+  
+  .composer {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+  box-sizing: border-box;
+    
+}
+
+.composer input {
+  flex: 1 1 0;
+  width: 0;
+  min-width: 0;
+  
+}
+
+.composer button {
+  flex: 0 0 auto;
+  width: 60px;
+  white-space: nowrap;
+  margin-left: 5px;
+   position: relative;
+  bottom: 30px;
+ 
+}
+  
+  
+/* באנר פרופיל שנפתח בלחיצה על הודעה */
+.profile-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(15, 23, 42, .42);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 16px;
+}
+
+.profile-banner {
+  width: 100%;
+  max-width: 440px;
+  background: #fff;
+  border: 1px solid #e9d5ff;
+  border-radius: 24px;
+  padding: 22px;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, .2);
+  animation: profileSlide .2s ease-out;
+}
+
+@keyframes profileSlide {
+  from { transform: translateY(25px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.profile-banner-top {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  margin-bottom: 16px;
+}
+
+.profile-banner-avatar {
+  width: 58px;
+  height: 58px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #ede9fe, #fae8ff);
+  color: #7c3aed;
+  display: grid;
+  place-items: center;
+  font-size: 23px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.profile-banner-name {
+  font-size: 19px;
+  font-weight: 800;
+}
+
+.profile-banner-age {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.profile-banner-actions {
+  display: flex;
+  gap: 9px;
+}
+
+.profile-banner-actions button {
+  flex: 1;
+}
+
+.profile-close {
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 12px;
+  color: #64748b;
+  background: #f1f5f9;
+}
+
+.msg-body {
+  cursor: pointer;
+}
+
+.msg-body:hover {
+  border-color: #c4b5fd;
+}
+
+@media (min-width: 600px) {
+  .profile-overlay {
+    align-items: center;
+  }
+}
+  
+  
+/* אזור הצ'אט */
+.app:has(.chat) {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* כותרת החדר */
+.chat-head {
+  flex: 0 0 auto;
+}
+
+/* אזור הצ'אט כולו */
+.chat {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: auto;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  overflow: hidden;
+}
+
+/* אזור ההודעות */
+.messages {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  touch-action: pan-y;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* תיבת ההקלדה והכפתור */
+.composer {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px;
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+  background: #fff;
+  border-top: 1px solid var(--border);
+}
+
+/* שדה ההקלדה */
+.composer input {
+  flex: 1 1 0;
+  width: 0;
+  min-width: 0;
+  position: static;
+  bottom: auto;
+}
+
+/* כפתור השליחה */
+.composer button {
+  flex: 0 0 40px;
+  width: 40px;
+  margin: 0;
+  position: static;
+  bottom: auto;
+}
+
+
+#backFromLive {
+  background: #ffff;
+  color: #1f2937;
+  border: 1px solid #d1d5db;
+  border-radius: 24px;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: bolder;
+  cursor: pointer;
+  
+  transition: background 0.2s ease;
+}
+
+#backFromLive:hover {
+  background: #e5e7eb;
+}
+
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  
+  <script>
+  
+  const SUPABASE_URL = 'https://kxttoscdrdyckbhhhyvl.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_XbYvk8WDbZOSeZvtP4IDkg_r0TwmNrs';
+
+const supabaseClient = window.supabase.createClient(
+  SUPABASE_URL,
+  SUPABASE_ANON_KEY
+);
+  
+  
+  async function adminGoogleLogin() {
+  const { data, error } = await supabaseClient.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: 'http://127.0.0.1:5501/admin.html',
+      queryParams: {
+        access_type: 'offline',
+        prompt: 'select_account'
+      }
+    }
+  });
+
+  if (error) {
+    console.error('שגיאת התחברות עם Google:', error);
+    alert('ההתחברות עם Google נכשלה');
+  }
+}
+  
+function setupAdminTrigger() {
+  var timer = null;
+  var triggered = false;
+
+  document.addEventListener('pointerdown', function (event) {
+    if (!event.target.closest('#adminTrigger')) return;
+
+    triggered = false;
+    clearTimeout(timer);
+
+    timer = setTimeout(function () {
+      triggered = true;
+      adminGoogleLogin();
+    }, 5000);
+  });
+
+  function stopPress() {
+    clearTimeout(timer);
+  }
+
+  document.addEventListener('pointerup', stopPress);
+  document.addEventListener('pointercancel', stopPress);
+  document.addEventListener('pointerleave', stopPress);
+
+  document.addEventListener('click', function (event) {
+    if (!event.target.closest('#adminTrigger')) return;
+
+    if (triggered) {
+      event.preventDefault();
+      event.stopPropagation();
+      triggered = false;
+    }
+  }, true);
+}
+
+setupAdminTrigger();
+
+(function () {
+  'use strict';
+
+  var KEYS = {
+    session: 'stochat_guest_session',
+    rooms: 'stochat_rooms',
+    roomMsgs: 'stochat_room_messages',
+    chats: 'stochat_private_chats',
+    privateMsgs: 'stochat_private_messages',
+    seeded: 'stochat_seeded'
+  };
+
+  /* ---- Icons (Lucide, inline SVG — no emoji) ---- */
+  var ICONS = {
+    logo:'<path d="M14 9a2 2 0 0 1-2 2H6l-4 4V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2z"/><path d="M18 9h2a2 2 0 0 1 2 2v11l-4-4h-6a2 2 0 0 1-2-2v-1"/>',
+    hash:'<line x1="4" x2="20" y1="9" y2="9"/><line x1="4" x2="20" y1="15" y2="15"/><line x1="10" x2="8" y1="3" y2="21"/><line x1="16" x2="14" y1="3" y2="21"/>',
+    mail:'<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>',
+    logout:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/>',
+    plus:'<path d="M5 12h14"/><path d="M12 5v14"/>',
+    send:'<path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/>',
+    back:'<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
+    users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>'
+  };
+  function ic(name, size) {
+    return '<svg xmlns="http://www.w3.org/2000/svg" width="' + (size || 18) + '" height="' + (size || 18) +
+      '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+      ICONS[name] + '</svg>';
+  }
+
+  var app = document.getElementById('app');
+  var view = { name: 'login', id: null };
+
+  function read(key, fallback) {
+    try { var raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : fallback; }
+    catch (e) { return fallback; }
+  }
+  function write(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+  function fmtTime(ts) {
+    return new Date(ts).toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+  }
+  function fmtDate(ts) {
+    var d = new Date(ts), now = new Date();
+    if (d.toDateString() === now.toDateString()) return fmtTime(ts);
+    return d.toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit' });
+  }
+
+  function getSession() { return read(KEYS.session, null); }
+  function setSession(s) { write(KEYS.session, s); }
+  function clearSession() { localStorage.removeItem(KEYS.session); }
+
+  function seed() {
+    if (localStorage.getItem(KEYS.seeded)) return;
+    var now = Date.now();
+    var rooms = [
+      { id: uid(), title: 'מוזיקה', description: 'שירים, להקות והופעות', creator_name: 'נועה', creator_age: 22, creator_guest_id: 'demo1', created_date: now - 3600000 },
+      { id: uid(), title: 'סרטים וסדרות', description: 'מה ראיתם לאחרונה?', creator_name: 'איתי', creator_age: 27, creator_guest_id: 'demo2', created_date: now - 7200000 },
+      { id: uid(), title: "צ'אט חופשי", description: 'על כל מה שבא לכם', creator_name: 'רון', creator_age: 24, creator_guest_id: 'demo3', created_date: now - 10800000 }
+    ];
+    var msgs = [
+      { id: uid(), room_id: rooms[0].id, author_name: 'נועה', author_age: 22, author_guest_id: 'demo1', content: 'היי! איזה שיר אתם שומעים עכשיו?', created_date: now - 3500000 },
+      { id: uid(), room_id: rooms[0].id, author_name: 'רון', author_age: 24, author_guest_id: 'demo3', content: 'אני על ג\'אז לאחרונה, ממכר', created_date: now - 3400000 },
+      { id: uid(), room_id: rooms[1].id, author_name: 'איתי', author_age: 27, author_guest_id: 'demo2', content: 'מישהו ראה את הסדרה החדשה?', created_date: now - 7100000 },
+      { id: uid(), room_id: rooms[2].id, author_name: 'רון', author_age: 24, author_guest_id: 'demo3', content: 'ברוכים הבאים! פה מדברים על הכל', created_date: now - 10700000 }
+    ];
+    write(KEYS.rooms, rooms);
+    write(KEYS.roomMsgs, msgs);
+    localStorage.setItem(KEYS.seeded, '1');
+  }
+
+  function participantsKey(a, b) { return [a, b].sort().join('__'); }
+
+  
+
+async function findOrCreateChat(other) {
+  var me = getSession();
+
+  if (
+  !me || !me.id ||
+  !other || !other.id ||
+  String(other.id) === String(me.id)
+) {
+  return null;
+}
+
+  try {
+    // קודם בודקים אם השיחה כבר קיימת בסדר הראשון
+    var result = await supabaseClient
+      .from('private_chats')
+      .select('*')
+      .eq('user_a', me.id)
+      .eq('user_b', other.id)
+      .limit(1);
+
+    if (result.error) throw result.error;
+
+    var row = result.data && result.data[0];
+
+    // אם לא נמצאה, בודקים בסדר ההפוך
+    if (!row) {
+      result = await supabaseClient
+        .from('private_chats')
+        .select('*')
+        .eq('user_a', other.id)
+        .eq('user_b', me.id)
+        .limit(1);
+
+      if (result.error) throw result.error;
+
+      row = result.data && result.data[0];
+    }
+
+    // אם אין שיחה קיימת, יוצרים אחת בשרת
+    if (!row) {
+      var participants = [
+        {
+          id: me.id,
+          name: me.name || 'אורח',
+          age: Number(me.age) || null
+        },
+        {
+          id: other.id,
+          name: other.name || 'אורח',
+          age: Number(other.age) || null
+        }
+      ].sort(function (a, b) {
+        return a.id.localeCompare(b.id);
+      });
+
+      var now = new Date().toISOString();
+
+      var insertResult = await supabaseClient
+        .from('private_chats')
+        .insert({
+          id: crypto.randomUUID(),
+          user_a: participants[0].id,
+          user_b: participants[1].id,
+          user_a_name: participants[0].name,
+          user_b_name: participants[1].name,
+          user_a_age: participants[0].age,
+          user_b_age: participants[1].age,
+          created_at: now,
+          last_message_at: now
+        })
+        .select()
+        .single();
+
+      if (insertResult.error) throw insertResult.error;
+
+      row = insertResult.data;
+    }
+
+    // ממירים את רשומת Supabase למבנה שהממשק הקיים מצפה לו
+    var chat = {
+      id: row.id,
+      participants_key: participantsKey(row.user_a, row.user_b),
+      participant_a_guest_id: row.user_a,
+      participant_b_guest_id: row.user_b,
+      participant_a_name: row.user_a_name || 'אורח',
+      participant_b_name: row.user_b_name || 'אורח',
+      participant_a_age: row.user_a_age || '',
+      participant_b_age: row.user_b_age || '',
+      last_message: '',
+      last_message_at: row.last_message_at
+        ? new Date(row.last_message_at).getTime()
+        : Date.now(),
+      created_date: row.created_at
+        ? new Date(row.created_at).getTime()
+        : Date.now()
+    };
+
+    // מעדכנים את המטמון המקומי בלי למחוק שיחות אחרות
+    var chats = read(KEYS.chats, []);
+    var index = chats.findIndex(function (c) {
+      return c.id === chat.id;
+    });
+
+    if (index >= 0) {
+      chat.last_message = chats[index].last_message || '';
+      chats[index] = chat;
+    } else {
+      chats.push(chat);
+    }
+
+    write(KEYS.chats, chats);
+
+    return chat;
+
+  } catch (err) {
+    console.error('שגיאה בפתיחת שיחה פרטית:', err);
+    alert('לא הצלחנו לפתוח שיחה פרטית: ' + (err.message || 'שגיאה לא ידועה'));
+    return null;
+  }
+}
+
+
+
+ 
+function otherParticipant(chat) {
+  var me = getSession();
+
+  if (chat.participant_a_guest_id === me.id) {
+    return {
+      name: chat.participant_b_name || 'אורח',
+      age: chat.participant_b_age || '',
+      id: chat.participant_b_guest_id
+    };
+  }
+
+  return {
+    name: chat.participant_a_name || 'אורח',
+    age: chat.participant_a_age || '',
+    id: chat.participant_a_guest_id
+  };
+}
+
+  
+function header(active) {
+  var s = getSession();
+  return '' +
+    '<header class="header"><div class="header-inner">' +
+      '<button class="brand" data-nav="rooms">' +
+        '<span class="brand-logo" id="adminTrigger">' + ic('logo', 18) + '</span><span class="brand-name">סטוצ\'אט</span>' +
+      '</button>' +
+      '<nav class="nav">' +
+        '<button class="nav-btn' + (active === 'rooms' ? ' active' : '') + '" data-nav="rooms">' + ic('hash', 14) + 'חדרים</button>' +
+        '<button class="nav-btn' + (active === 'private' ? ' active' : '') + '" data-nav="private">' + ic('mail', 14) + 'אישיים</button>' +
+      '</nav>' +
+      '<div class="user">' +
+        '<span class="user-avatar">' + esc(s.name.charAt(0)) + '</span>' +
+        '<span class="user-name">' + esc(s.name) + '</span>' +
+        '<button class="btn-primary sm" data-nav="live" title="משתמשים בלייב">' +
+          ic('users', 16) +
+        '</button>' +
+      '</div>' +
+    '</div></header>';
+}
+
+
+  function scrollMsgs() {
+    var el = document.getElementById('messages');
+    if (el) el.scrollTop = el.scrollHeight;
+  }
+
+  /* ---------- Login ---------- */
+  function renderLogin() {
+    app.innerHTML = '' +
+      '<div class="login-wrap">' +
+        '<div class="blob b1"></div><div class="blob b2"></div>' +
+        '<div class="login-card">' +
+          '<div class="login-logo">' + ic('logo', 30) + '</div>' +
+          '<h1>סטוצ\'אט</h1>' +
+          '<p class="login-sub">צ\'אט רנדומלי להכרת אנשים חדשים</p>' +
+          '<form id="loginForm">' +
+            '<div class="field"><label>שם</label><input id="nameInput" maxlength="20" placeholder="הזן את שמך" autocomplete="off"></div>' +
+            '<div class="field"><label>גיל</label><input id="ageInput" type="number" min="13" max="120" placeholder="הזן את גילך"></div>' +
+            '<p class="err" id="loginErr"></p>' +
+            '<button class="btn-primary" type="submit" style="margin-top:8px">כניסה כאורח</button>' +
+          '</form>' +
+          '<div class="login-foot">' + ic('users', 16) + 'הצטרף לחדרי צ\'אט פתוחים</div>' +
+        '</div>' +
+      '</div>';
+  }
+
+  /* ---------- Rooms list ---------- */
+  function renderRooms() {
+    var rooms = read(KEYS.rooms, []).slice().sort(function (a, b) { return b.created_date - a.created_date; });
+    var list = rooms.length ? rooms.map(function (r) {
+      return '<button class="room-card" data-open-room="' + r.id + '">' +
+        '<div class="room-ic">' + esc((r.creator_name || 'אורח').charAt(0)) + '</div>' +
+        '<div class="room-info">' +
+          '<div class="room-title">' + esc(r.title) + '</div>' +
+          (r.description ? '<div class="room-desc">' + esc(r.description) + '</div>' : '') +
+          '<div class="room-meta">נפתח ע"י ' + esc(r.creator_name) + ' · ' + esc(r.creator_age) + '</div>' +
+        '</div>' +
+      '</button>';
+    }).join('') : '<div class="empty">אין חדרים עדיין. פתחו נושא חדש!</div>';
+
+    app.innerHTML = '' +
+      '<div class="app">' + header('rooms') +
+        '<main class="main">' +
+          '<div class="page-head">' +
+            "<div><h2>סטוצ'אט ציבוריים</h2><p class=\"muted\">בחרו נושא חדש או הצטרפו לשיחה</p></div>" +'<button class="btn-primary sm" data-new-room>' + ic('plus', 16) + 'נושא חדש</button>' +
+          '</div>' +
+          '<div class="room-list">' + list + '</div>' +
+        '</main>' +
+      '</div>' +
+      '<div id="modal"></div>';
+  }
+
+  function openRoomModal() {
+    document.getElementById('modal').innerHTML = '' +
+      '<div class="overlay">' +
+        '<div class="modal-card">' +
+          '<h3>פתיחת נושא חדש</h3>' +
+          '<form id="roomForm">' +
+            '<div class="field"><label>כותרת</label><input id="rTitle" maxlength="40" placeholder="למשל: מוזיקה" autocomplete="off"></div>' +
+            '<div class="field"><label>תיאור (אופציונלי)</label><textarea id="rDesc" maxlength="120" rows="2" placeholder="על מה נדבר?"></textarea></div>' +
+            '<p class="err" id="rErr"></p>' +
+            '<div class="modal-actions">' +
+              '<button type="button" class="btn-ghost" data-close-modal>ביטול</button>' +
+              '<button type="submit" class="btn-primary">פתח חדר</button>' +
+            '</div>' +
+          '</form>' +
+        '</div>' +
+      '</div>';
+    document.getElementById('rTitle').focus();
+  }
+
+  function closeModal() {
+    var m = document.getElementById('modal');
+    if (m) m.innerHTML = '';
+  }
+
+  
+function openProfileBanner(user) {
+  if (!user || !user.id) return;
+
+  var me = getSession();
+  if (!me || user.id === me.id) return;
+
+  var old = document.getElementById('profileOverlay');
+  if (old) old.remove();
+
+  var overlay = document.createElement('div');
+  overlay.id = 'profileOverlay';
+  overlay.className = 'profile-overlay';
+
+  overlay.innerHTML =
+    '<div class="profile-banner" role="dialog" aria-modal="true">' +
+      '<div class="profile-banner-top">' +
+        '<div class="profile-banner-avatar">' +
+          esc((user.name || 'אורח').charAt(0)) +
+        '</div>' +
+        '<div>' +
+          
+'<div class="profile-banner-name">' +
+  esc(user.name || 'אורח') +
+  statusDotHtml(user.id) +
+  '<span style="font-size:12px;margin-inline-start:5px;color:' +
+    (liveUsers.some(function(u) {
+      return String(u.id) === String(user.id);
+    }) ? '#22c55e' : '#ef4444') +
+  ';">' +
+    (liveUsers.some(function(u) {
+      return String(u.id) === String(user.id);
+    }) ? 'לייב עכשיו' : 'לא זמין') +
+  '</span>' +
+'</div>' +
+
+          '<div class="profile-banner-age">' +
+            (user.age ? 'גיל ' + esc(user.age) : 'משתמש אורח') +
+            ' · חבר בחדר' +
+          '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="profile-banner-actions">' +
+        '<button type="button" class="btn-primary" id="startPrivateChat">' +
+          ic('mail', 17) + ' מעבר לצ\'אט פרטי' +
+        '</button>' +
+      '</div>' +
+      '<button type="button" class="profile-close" id="closeProfileBanner">' +
+        'סגירה' +
+      '</button>' +
+    '</div>';
+
+  document.body.appendChild(overlay);
+
+  document.getElementById('closeProfileBanner').onclick = function () {
+    overlay.remove();
+  };
+
+  overlay.addEventListener('click', function (e) {
+    if (e.target === overlay) overlay.remove();
+  });
+
+  
+document.getElementById('startPrivateChat').onclick = async function () {
+  var button = this;
+  button.disabled = true;
+  button.textContent = 'פותח שיחה...';
+
+  var chat = await findOrCreateChat(user);
+
+  if (chat) {
+    overlay.remove();
+    go('chat', chat.id);
+  } else {
+    button.disabled = false;
+    button.innerHTML = ic('mail', 17) + ' מעבר לצ׳אט פרטי';
+  }
+};
+
+}
+
+  
+async function loadPrivateChatsFromSupabase() {
+  var me = getSession();
+  if (!me || !me.id) return [];
+
+  var result = await supabaseClient
+    .from('private_chats')
+    .select('*')
+    .or('user_a.eq.' + me.id + ',user_b.eq.' + me.id)
+    .order('last_message_at', { ascending: false });
+
+  if (result.error) {
+    console.error('שגיאה בטעינת שיחות פרטיות:', result.error);
+    return read(KEYS.chats, []);
+  }
+
+  var chats = [];
+
+  for (var row of (result.data || [])) {
+    var chat = {
+      id: row.id,
+      participants_key: participantsKey(row.user_a, row.user_b),
+      participant_a_guest_id: row.user_a,
+      participant_b_guest_id: row.user_b,
+      participant_a_name: row.user_a_name || 'אורח',
+      participant_b_name: row.user_b_name || 'אורח',
+      participant_a_age: row.user_a_age || '',
+      participant_b_age: row.user_b_age || '',
+      last_message: '',
+      last_message_at: row.last_message_at
+        ? new Date(row.last_message_at).getTime()
+        : Date.now(),
+      created_date: row.created_at
+        ? new Date(row.created_at).getTime()
+        : Date.now()
+    };
+
+    // טעינת ההודעה האחרונה של השיחה
+    var lastResult = await supabaseClient
+      .from('private_messages')
+      .select('content, created_at')
+      .eq('chat_id', row.id)
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (lastResult.error) {
+      console.error('שגיאה בטעינת הודעה אחרונה:', lastResult.error);
+    } else if (lastResult.data && lastResult.data.length) {
+      chat.last_message = lastResult.data[0].content || '';
+      chat.last_message_at = new Date(
+        lastResult.data[0].created_at
+      ).getTime();
+    }
+
+    chats.push(chat);
+  }
+
+  // שומרים רק את השיחות שהתקבלו מהשרת עבור המשתמש הנוכחי,
+  // יחד עם מטמון ישן של שיחות אחרות, אם קיים.
+  var oldChats = read(KEYS.chats, []).filter(function (old) {
+    return old.participant_a_guest_id !== me.id &&
+           old.participant_b_guest_id !== me.id;
+  });
+
+  write(KEYS.chats, oldChats.concat(chats));
+
+  return chats;
+}
+  
+  
+async function loadPrivateMessagesFromSupabase(chatId) {
+  var result = await supabaseClient
+    .from('private_messages')
+    .select('*')
+    .eq('chat_id', chatId)
+    .order('created_at', { ascending: true });
+
+  if (result.error) {
+    console.error('שגיאה בטעינת הודעות פרטיות:', result.error);
+    return null;
+  }
+
+  var serverMessages = (result.data || []).map(function (row) {
+    return {
+      id: row.id,
+      chat_id: row.chat_id,
+      author_guest_id: row.sender_id,
+      author_name: row.sender_name,
+      content: row.content,
+      created_date: new Date(row.created_at).getTime()
+    };
+  });
+
+  var allMessages = read(KEYS.privateMsgs, []).filter(function (m) {
+    return m.chat_id !== chatId;
+  });
+
+  write(KEYS.privateMsgs, allMessages.concat(serverMessages));
+
+  return serverMessages;
+}
+
+
+var privateMessagesChannel = null;
+var subscribedPrivateChatId = null;
+
+function listenToPrivateMessages(chatId) {
+  // אם כבר קיים מנוי לאותה שיחה, לא יוצרים מנוי נוסף
+  if (
+    privateMessagesChannel &&
+    subscribedPrivateChatId === chatId
+  ) {
+    return;
+  }
+
+  // מסירים מנוי קודם, אם עברנו לשיחה אחרת
+  if (privateMessagesChannel) {
+    supabaseClient.removeChannel(privateMessagesChannel);
+  }
+
+  subscribedPrivateChatId = chatId;
+
+  privateMessagesChannel = supabaseClient
+    .channel('private-messages-' + chatId)
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'private_messages',
+        filter: 'chat_id=eq.' + chatId
+      },
+      function (payload) {
+        // מעבדים רק את ההודעה החדשה שהגיעה
+        var row = payload.new;
+        if (!row || !row.id) return;
+
+        var message = {
+          id: row.id,
+          chat_id: row.chat_id,
+          author_guest_id: row.sender_id,
+          author_name: row.sender_name || 'אורח',
+          content: row.content || '',
+          created_date: new Date(row.created_at).getTime()
+        };
+
+        // מניעת הוספה כפולה לאחסון המקומי
+        var allMessages = read(KEYS.privateMsgs, []);
+        var alreadyExists = allMessages.some(function (m) {
+          return m.id === message.id;
+        });
+
+        if (!alreadyExists) {
+          allMessages.push(message);
+          write(KEYS.privateMsgs, allMessages);
+        }
+
+        // מעדכנים את תצוגת הצ'אט בלי לטעון מחדש את כל המסך
+        if (view.name === 'chat' && view.id === chatId) {
+          var messagesEl = document.getElementById('messages');
+
+          if (messagesEl) {
+            var empty = messagesEl.querySelector('.empty');
+            if (empty) empty.remove();
+
+            var existsInDOM = messagesEl.querySelector(
+              '[data-private-message-id="' + message.id + '"]'
+            );
+
+            if (!existsInDOM) {
+              var wrapper = document.createElement('div');
+              wrapper.innerHTML = privateMsgHtml(message);
+
+              var messageEl = wrapper.firstElementChild;
+
+              if (messageEl) {
+                messageEl.setAttribute(
+                  'data-private-message-id',
+                  message.id
+                );
+
+                messagesEl.appendChild(messageEl);
+                scrollMsgs();
+              }
+            }
+          }
+        }
+      }
+    )
+    .subscribe(function (status, err) {
+      console.log('מצב Realtime של צ׳אט פרטי:', status, err || '');
+
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        console.error('שגיאה ב־Realtime של צ׳אט פרטי:', status, err);
+      }
+    });
+}
+
+
+
+  /* ---------- Room chat ---------- */
+  
+function roomMsgHtml(m) {
+  var me = getSession();
+  var mine = m.author_guest_id === me.id;
+
+  return '' +
+    '<div class="msg' + (mine ? ' mine' : '') + '">' +
+      '<button class="avatar" ' +
+        'data-author-id="' + esc(m.author_guest_id) + '" ' +
+        'data-author-name="' + esc(m.author_name) + '" ' +
+        'data-author-age="' + esc(m.author_age) + '" ' +
+        'title="' + (mine ? 'אתה' : 'פתיחת פרופיל') + '">' +
+        esc((m.author_name || 'אורח').charAt(0)) +
+      '</button>' +
+      '<div class="msg-body" ' +
+        'data-author-id="' + esc(m.author_guest_id) + '" ' +
+        'data-author-name="' + esc(m.author_name) + '" ' +
+        'data-author-age="' + esc(m.author_age) + '">' +
+        '<div class="msg-head">' +
+          '<span class="msg-name">' +
+            esc(m.author_name) + (mine ? ' (אתה)' : '') +
+          '</span>' +
+          '<span class="msg-age">' + esc(m.author_age) + '</span>' +
+          '<span class="msg-time">' + fmtTime(m.created_date) + '</span>' +
+        '</div>' +
+        '<div class="msg-text">' + esc(m.content) + '</div>' +
+      '</div>' +
+    '</div>';
+}
+
+
+  
+
+function privateMsgHtml(m) {
+  var me = getSession();
+  var mine = m.author_guest_id === me.id;
+
+  return `
+    <div class="msg ${mine ? 'mine' : ''}" data-private-message-id="${esc(m.id)}">
+      <div class="avatar">${esc((m.author_name || 'אורח').charAt(0))}</div>
+
+      <div class="msg-body">
+        <div class="msg-head">
+          <span class="msg-name">
+            ${esc(m.author_name || 'אורח')}${mine ? ' (אתה)' : ''}
+          </span>
+
+          <span class="msg-time">${fmtTime(m.created_date)}</span>
+        </div>
+
+        <div class="msg-text">${esc(m.content || '')}</div>
+      </div>
+    </div>
+  `;
+}
+
+function renderRoomChat(roomId) {
+  var rooms = read(KEYS.rooms, []);
+  var room = rooms.find(function (r) {
+    return r.id === roomId;
+  });
+
+  if (!room) {
+    view = { name: 'rooms', id: null };
+    renderRooms();
+    return;
+  }
+
+  var msgs = read(KEYS.roomMsgs, [])
+    .filter(function (m) {
+      return m.room_id === roomId;
+    })
+    .sort(function (a, b) {
+      return a.created_date - b.created_date;
+    });
+
+  app.innerHTML = '' +
+    '<div class="app">' + header('rooms') +
+      '<main class="chat">' +
+        '<div class="chat-head">' +
+          '<button class="icon-btn" data-nav="rooms" title="חזרה">' +
+            ic('back', 20) +
+          '</button>' +
+          '<div class="chat-head-info">' +
+            '<div class="chat-head-title">' + esc(room.title) + '</div>' +
+            (room.description
+              ? '<div class="chat-head-sub">' + esc(room.description) + '</div>'
+              : '') +
+          '</div>' +
+        '</div>' +
+        '<div class="messages" id="messages">' +
+          (msgs.length
+            ? msgs.map(roomMsgHtml).join('')
+            : '<div class="empty">אין הודעות עדיין — תהיו הראשונים!</div>') +
+        '</div>' +
+        '<form class="composer" id="roomComposer">' +
+          '<input id="roomInput" placeholder="כתוב הודעה..." autocomplete="off">' +
+          '<button type="submit" class="send-btn" title="שלח">' +
+            ic('send', 18) +
+          '</button>' +
+        '</form>' +
+      '</main>' +
+    '</div>';
+
+  scrollMsgs();
+  listenToRoomMessages(roomId);
+}
+
+
+  /* ---------- Private chats list ---------- */
+  
+async function renderPrivateList() {
+  var me = getSession();
+  if (!me) return;
+
+  app.innerHTML = '' +
+    '<div class="app">' + header('private') +
+      '<main class="main">' +
+        '<div class="page-head"><div><h2>צ׳אטים אישיים</h2><p class="muted">שיחות פרטיות שלך</p></div></div>' +
+        '<div class="chat-list"><div class="empty">טוען שיחות...</div></div>' +
+      '</main>' +
+    '</div>';
+
+  var chats = await loadPrivateChatsFromSupabase();
+
+  // לא משנים מסך אם המשתמש עבר למסך אחר בזמן הטעינה
+  if (view.name !== 'private') return;
+
+  chats.sort(function (a, b) {
+    return (b.last_message_at || 0) - (a.last_message_at || 0);
+  });
+
+  var list = chats.length ? chats.map(function (c) {
+    var other = otherParticipant(c);
+
+    return '<button class="chat-item" data-open-chat="' + esc(c.id) + '">' +
+      '<div class="avatar">' + esc((other.name || 'אורח').charAt(0)) + '</div>' +
+      '<div class="chat-item-main">' +
+        '<div class="chat-item-name">' + esc(other.name || 'אורח') + '</div>' +
+        '<div class="chat-item-last">' +
+          (c.last_message ? esc(c.last_message) : 'התחילו שיחה...') +
+        '</div>' +
+      '</div>' +
+      '<div class="chat-item-time">' +
+        (c.last_message_at ? fmtDate(c.last_message_at) : '') +
+      '</div>' +
+    '</button>';
+  }).join('') :
+    '<div class="empty">אין צ׳אטים אישיים עדיין.<br>היכנסו לחדר ולחצו על שם של מישהו כדי לפתוח שיחה פרטית.</div>';
+
+  var listEl = app.querySelector('.chat-list');
+  if (listEl) listEl.innerHTML = list;
+}
+
+
+  
+async function renderPrivateChat(chatId) {
+  var chat = read(KEYS.chats, []).find(function (c) {
+    return c.id === chatId;
+  });
+
+  if (!chat) {
+    view = { name: 'private', id: null };
+    renderPrivateList();
+    return;
+  }
+
+  var other = otherParticipant(chat);
+
+  app.innerHTML = '' +
+    '<div class="app">' + header('private') +
+      '<main class="chat">' +
+        '<div class="chat-head">' +
+          '<button class="icon-btn" data-nav="private" title="חזרה">' +
+            ic('back', 20) +
+          '</button>' +
+          '<div class="chat-head-info">' +
+            '<div class="chat-head-title">' +
+  esc(other.name || 'אורח') +
+  statusDotHtml(other.id) +
+  '<span style="font-size:12px;margin-inline-start:5px;color:' +
+    (liveUsers.some(function(u) {
+      return String(u.id) === String(other.id);
+    }) ? '#22c55e' : '#ef4444') +
+  ';">' +
+    (liveUsers.some(function(u) {
+      return String(u.id) === String(other.id);
+    }) ? 'לייב עכשיו' : 'לא זמין') +
+  '</span>' +
+'</div>' +
+            '<div class="chat-head-sub">' +
+              (other.age ? 'גיל ' + esc(other.age) + ' · ' : '') +
+              'שיחה פרטית' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="messages" id="messages">' +
+          '<div class="empty">טוען הודעות...</div>' +
+        '</div>' +
+        '<form class="composer" id="chatComposer">' +
+          '<input id="chatInput" placeholder="כתוב הודעה..." autocomplete="off">' +
+          '<button type="submit" class="send-btn" title="שלח">' +
+            ic('send', 18) +
+          '</button>' +
+        '</form>' +
+      '</main>' +
+    '</div>';
+
+  listenToPrivateMessages(chatId);
+
+  var msgs = await loadPrivateMessagesFromSupabase(chatId);
+
+  if (view.name !== 'chat' || view.id !== chatId) return;
+
+  var messagesEl = document.getElementById('messages');
+  if (!messagesEl) return;
+
+  messagesEl.innerHTML = msgs && msgs.length
+    ? msgs.map(privateMsgHtml).join('')
+    : '<div class="empty">התחילו את השיחה...</div>';
+
+  scrollMsgs();
+}
+
+  
+
+async function loadRoomsFromSupabase() {
+  const { data, error } = await supabaseClient
+    .from('rooms')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('שגיאה בטעינת חדרים:', error);
+    return;
+  }
+
+  const rooms = (data || []).map(function (room) {
+    return {
+      ...room,
+      created_date: room.created_at
+        ? new Date(room.created_at).getTime()
+        : Date.now(),
+      creator_name: room.creator_name || 'אורח',
+      creator_age: room.creator_age || '',
+      description: room.description || ''
+    };
+  });
+
+  write(KEYS.rooms, rooms);
+  renderRooms();
+}
+  
+
+
+var roomMessagesChannel = null;
+var subscribedRoomId = null;
+
+function listenToRoomMessages(roomId) {
+  if (
+    roomMessagesChannel &&
+    subscribedRoomId === roomId
+  ) {
+    return;
+  }
+
+  if (roomMessagesChannel) {
+    supabaseClient.removeChannel(roomMessagesChannel);
+    roomMessagesChannel = null;
+    subscribedRoomId = null;
+  }
+
+  var channel = supabaseClient
+    .channel('room-messages-' + roomId)
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'room_messages',
+        filter: 'room_id=eq.' + roomId
+      },
+      function (payload) {
+        console.log('התקבלה הודעה ברילטיים:', payload.new);
+
+        loadRoomMessagesFromSupabase(roomId);
+      }
+    )
+    .subscribe(function (status, err) {
+      console.log('מצב Realtime:', status, err || '');
+
+      if (status === 'SUBSCRIBED') {
+        roomMessagesChannel = channel;
+        subscribedRoomId = roomId;
+
+        // טעינת הודעות לאחר החיבור
+        loadRoomMessagesFromSupabase(roomId);
+      }
+
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        console.error('שגיאה בחיבור Realtime:', status, err);
+      }
+    });
+
+  roomMessagesChannel = channel;
+}
+
+
+async function loadRoomMessagesFromSupabase(roomId) {
+  var { data, error } = await supabaseClient
+    .from('room_messages')
+    .select('*')
+    .eq('room_id', roomId)
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    console.error('שגיאה בטעינת הודעות מהשרת:', error);
+    return;
+  }
+
+  var serverMessages = (data || []).map(function (row) {
+    return {
+      id: row.id,
+      room_id: row.room_id,
+      author_guest_id: row.sender_id,
+      author_name: row.sender_name,
+      author_age: row.sender_age || '',
+      content: row.content,
+      created_date: new Date(row.created_at).getTime()
+    };
+  });
+
+  // שומרים את הודעות החדרים האחרים,
+  // ומחליפים את הודעות החדר הנוכחי בנתוני השרת
+  var allMessages = read(KEYS.roomMsgs, []).filter(function (m) {
+    return m.room_id !== roomId;
+  });
+
+  allMessages = allMessages.concat(serverMessages);
+  write(KEYS.roomMsgs, allMessages);
+
+  // מעדכנים את המסך רק אם עדיין נמצאים בחדר הזה
+  if (view.name === 'room' && view.id === roomId) {
+    renderRoomChat(roomId);
+  }
+}
+
+
+async function createRoomInSupabase(room) {
+  var me = getSession();
+
+  if (!me || !me.id) {
+    alert('צריך להתחבר מחדש לפני פתיחת חדר');
+    return null;
+  }
+
+  var { data, error } = await supabaseClient
+    .from('rooms')
+    .insert({
+      title: room.title,
+      description: room.description || '',
+      creator_name: me.name || 'אורח',
+      creator_id: me.id,
+      creator_age: Number(me.age) || null
+    })
+    .select()
+    .single();
+
+ if (error) {
+  console.error('שגיאה ביצירת נושא:', error);
+
+  alert(
+    'שגיאה בשמירת הנושא:\n' +
+    'קוד: ' + (error.code || 'אין') + '\n' +
+    'הודעה: ' + (error.message || 'אין') + '\n' +
+    'פרטים: ' + (error.details || 'אין') + '\n' +
+    'רמז: ' + (error.hint || 'אין')
+  );
+
+  return null;
+}
+
+  return {
+    ...data,
+    created_date: new Date(data.created_at).getTime(),
+    creator_name: data.creator_name || 'אורח',
+    creator_age: data.creator_age || ''
+  };
+}
+
+  /* ---------- Render dispatcher ---------- */
+  function render() {
+    var s = getSession();
+    if (!s) { view = { name: 'login', id: null }; renderLogin(); return; }
+    if (view.name === 'login') view = { name: 'rooms', id: null };
+    switch (view.name) {
+      case 'room': renderRoomChat(view.id); break;
+      case 'live': renderLiveUsers(); break;
+      case 'private': renderPrivateList(); break;
+      case 'chat': renderPrivateChat(view.id); break;
+      default: renderRooms();
+    }
+  }
+  
+  let liveChannel = null;
+let liveUsers = [];
+
+function statusDotHtml(userId) {
+  var online = liveUsers.some(function (user) {
+    return String(user.id) === String(userId);
+  });
+
+  return '<span class="status-dot" data-status-user-id="' +
+    esc(String(userId)) +
+    '" style="display:inline-block;width:9px;height:9px;border-radius:50%;background:' +
+    (online ? '#22c55e' : '#ef4444') +
+    ';margin-inline-start:8px;vertical-align:middle;"></span>';
+}
+
+function updatePresenceIndicators() {
+  document.querySelectorAll('[data-status-user-id]').forEach(function (dot) {
+    var online = liveUsers.some(function (user) {
+      return String(user.id) === dot.dataset.statusUserId;
+    });
+
+    dot.style.backgroundColor = online ? '#22c55e' : '#ef4444';
+  });
+}
+
+  
+function startPresence() {
+  const me = getSession();
+
+  if (!me || !me.id) return;
+  if (liveChannel) return;
+
+  liveChannel = supabaseClient.channel('stochat-live-users', {
+    config: {
+      presence: {
+        key: String(me.id)
+      }
+    }
+  });
+
+  liveChannel
+    .on('presence', { event: 'sync' }, () => {
+      const state = liveChannel.presenceState();
+
+      liveUsers = Object.values(state)
+        .flat()
+        .filter(user => user && user.id)
+        .filter((user, index, array) =>
+          array.findIndex(item => item.id === user.id) === index
+        );
+
+      updateLiveUsersList();
+      updatePresenceIndicators();
+    })
+    .subscribe(async status => {
+      if (status === 'SUBSCRIBED') {
+        await liveChannel.track({
+          id: String(me.id),
+          name: me.name || 'משתמש',
+          age: me.age || null
+        });
+      }
+    });
+}
+
+
+
+function renderLiveUsers() {
+  app.innerHTML =
+    '<div class="app">' +
+      header('live') +
+      '<main class="main">' +
+
+        '<div style="display:flex; justify-content:flex-start; margin-bottom:16px;">' +
+          '<button type="button" id="backFromLive" class="btn btn-secondary">' +
+            '→ חדרים' +
+          '</button>' +
+        '</div>' +
+
+        '<div class="page-head">' +
+          '<div>' +
+            '<h2>משתמשים בלייב</h2>' +
+            '<p>האנשים שמחוברים כרגע</p>' +
+          '</div>' +
+          '<span id="liveCount">0 מחוברים</span>' +
+        '</div>' +
+
+        '<div id="liveUsersList" class="room-list">' +
+          '<div class="empty">טוען משתמשים מחוברים...</div>' +
+        '</div>' +
+
+      '</main>' +
+    '</div>';
+
+  document.getElementById('backFromLive').onclick = function () {
+    go('rooms');
+  };
+
+  updateLiveUsersList();
+}
+
+
+
+function updateLiveUsersList() {
+  if (view.name !== 'live') return;
+
+  const list = document.getElementById('liveUsersList');
+  const count = document.getElementById('liveCount');
+
+  if (!list || !count) return;
+
+  const me = getSession();
+
+  const otherUsers = liveUsers.filter(user =>
+    !me || String(user.id) !== String(me.id)
+  );
+
+  count.textContent = otherUsers.length + ' מחוברים';
+
+  if (!otherUsers.length) {
+    list.innerHTML =
+      '<div class="empty">כרגע אין משתמשים מחוברים.</div>';
+    return;
+  }
+
+  list.innerHTML = otherUsers.map(user => {
+    return (
+      '<button class="chat-item" ' +
+        'data-live-user-id="' + esc(String(user.id)) + '">' +
+        '<span class="avatar">' +
+          esc((user.name || '?').charAt(0)) +
+        '</span>' +
+        '<span class="chat-item-main">' +
+          '<span class="chat-item-name">' +
+            esc(user.name || 'משתמש') +
+          '</span>' +
+          '<span class="chat-item-last" style="display: block; margin-top: 4px;">מחובר/ת עכשיו</span>' +
+        '</span>' +
+        '<span class="live-dot"></span>' +
+      '</button>'
+    );
+  }).join('');
+}
+
+  
+  
+  
+  function go(name, id) { view = { name: name, id: id || null }; render(); }
+
+  /* ---------- Events ---------- */
+  document.addEventListener('click', function (e) {
+    var t = e.target.closest('[data-nav],[data-open-room],[data-open-chat],[data-author-id],[data-live-user-id],[data-logout],[data-new-room],[data-close-modal]');
+if (!t) return;
+
+if (t.hasAttribute('data-live-user-id')) {
+  var user = liveUsers.find(function (u) {
+    return String(u.id) === t.dataset.liveUserId;
+  });
+
+  if (user) openProfileBanner(user);
+  return;
+}
+    if (t.hasAttribute('data-close-modal')) { closeModal(); return; }
+    if (t.hasAttribute('data-new-room')) { openRoomModal(); return; }
+    if (t.hasAttribute('data-logout')) { clearSession(); go('login'); return; }
+    if (t.dataset.nav) { go(t.dataset.nav); return; }
+    
+if (t.dataset.openRoom) {
+  var roomId = t.dataset.openRoom;
+  go('room', roomId);
+  loadRoomMessagesFromSupabase(roomId);
+  return;
+}
+
+    if (t.dataset.openChat) { go('chat', t.dataset.openChat); return; }
+   
+if (t.dataset.authorId) {
+  openProfileBanner({
+    id: t.dataset.authorId,
+    name: t.dataset.authorName,
+    age: Number(t.dataset.authorAge)
+  });
+  return;
+}
+
+  });
+
+  
+document.addEventListener('submit', async function (e) {
+  var form = e.target;
+  e.preventDefault();
+
+  // ===== כניסה כאורח =====
+  if (form.id === 'loginForm') {
+    var name = document.getElementById('nameInput').value.trim();
+    var age = parseInt(document.getElementById('ageInput').value, 10);
+    var errEl = document.getElementById('loginErr');
+    var loginBtn = form.querySelector('button[type="submit"]');
+
+    if (!name) {
+      errEl.textContent = 'אנא הזן שם';
+      return;
+    }
+
+    if (!age || age < 13 || age > 120) {
+      errEl.textContent = 'אנא הזן גיל תקין (13-120)';
+      return;
+    }
+
+    loginBtn.disabled = true;
+    loginBtn.textContent = 'מתחבר...';
+    errEl.textContent = '';
+
+    try {
+      var authResult = await supabaseClient.auth.getSession();
+
+      if (authResult.error) throw authResult.error;
+
+      var authSession = authResult.data.session;
+
+      if (!authSession) {
+        var signInResult =
+          await supabaseClient.auth.signInAnonymously();
+
+        if (signInResult.error) throw signInResult.error;
+
+        authSession = signInResult.data.session;
+      }
+
+      if (!authSession || !authSession.user) {
+        throw new Error('לא התקבלה זהות משתמש מ-Supabase');
+      }
+
+      setSession({
+        id: authSession.user.id,
+        name: name,
+        age: age,
+        joinedAt: Date.now()
+      });
+      
+startPresence();
+      
+      await loadRoomsFromSupabase();
+      go('rooms');
+
+    } catch (err) {
+      console.error('שגיאת כניסה:', err);
+      errEl.textContent =
+        'לא הצלחנו להתחבר: ' + (err.message || 'שגיאה לא ידועה');
+    } finally {
+      loginBtn.disabled = false;
+      loginBtn.textContent = 'כניסה כאורח';
+    }
+
+    return;
+  }
+
+  // ===== פתיחת חדר ציבורי =====
+  if (form.id === 'roomForm') {
+    var titleInput = document.getElementById('rTitle');
+    var descInput = document.getElementById('rDesc');
+    var roomErr = document.getElementById('rErr');
+    var createBtn = form.querySelector('button[type="submit"]');
+
+    var title = titleInput.value.trim();
+    var description = descInput.value.trim();
+
+    if (!title) {
+      roomErr.textContent = 'צריך להזין כותרת לחדר';
+      titleInput.focus();
+      return;
+    }
+
+    createBtn.disabled = true;
+    createBtn.textContent = 'פותח חדר...';
+    roomErr.textContent = '';
+
+    try {
+      var createdRoom = await createRoomInSupabase({
+        title: title,
+        description: description
+      });
+
+      if (!createdRoom) {
+        roomErr.textContent = 'יצירת החדר נכשלה. בדוק אם הופיעה הודעת שגיאה.';
+        return;
+      }
+
+      var rooms = read(KEYS.rooms, []);
+
+      rooms = rooms.filter(function (r) {
+        return r.id !== createdRoom.id;
+      });
+
+      rooms.unshift(createdRoom);
+      write(KEYS.rooms, rooms);
+
+      closeModal();
+      go('room', createdRoom.id);
+
+      await loadRoomMessagesFromSupabase(createdRoom.id);
+
+    } catch (err) {
+      console.error('שגיאה בפתיחת חדר:', err);
+      roomErr.textContent =
+        'שגיאה ביצירת החדר: ' + (err.message || 'שגיאה לא ידועה');
+    } finally {
+      if (createBtn.isConnected) {
+        createBtn.disabled = false;
+        createBtn.textContent = 'פתח חדר';
+      }
+    }
+
+    return;
+  }
+
+  // ===== שליחת הודעה בחדר ציבורי =====
+  if (form.id === 'roomComposer') {
+    var input = document.getElementById('roomInput');
+    var messageText = input.value.trim();
+    var me = getSession();
+    var roomId = view.id;
+    var sendBtn = form.querySelector('button[type="submit"]');
+
+    if (!messageText) return;
+
+    if (!me || !roomId) {
+      alert('צריך להתחבר מחדש כדי לשלוח הודעות');
+      return;
+    }
+
+    sendBtn.disabled = true;
+
+    try {
+      var result = await supabaseClient
+        .from('room_messages')
+        .insert({
+          room_id: roomId,
+          sender_id: me.id,
+          sender_name: me.name,
+          sender_age: Number(me.age) || null,
+          content: messageText
+        })
+        .select()
+        .single();
+
+      if (result.error) throw result.error;
+
+      input.value = '';
+
+      await loadRoomMessagesFromSupabase(roomId);
+
+    } catch (err) {
+      console.error('שגיאה בשליחת הודעה:', err);
+      alert(
+        'ההודעה לא נשלחה:\n' +
+        (err.message || 'שגיאה לא ידועה')
+      );
+    } finally {
+      var currentBtn = document.querySelector(
+        '#roomComposer button[type="submit"]'
+      );
+
+      if (currentBtn) currentBtn.disabled = false;
+    }
+
+    return;
+  }
+
+  // ===== שליחת הודעה בצ'אט פרטי מקומי =====
+  
+  // ===== שליחת הודעה בצ'אט פרטי דרך Supabase =====
+  if (form.id === 'chatComposer') {
+    var cInput = document.getElementById('chatInput');
+    var cText = cInput.value.trim();
+    var s2 = getSession();
+    var chatId = view.id;
+    var sendBtn = form.querySelector('button[type="submit"]');
+
+    if (!cText) return;
+
+    if (!s2 || !s2.id || !chatId) {
+      alert('צריך להתחבר מחדש כדי לשלוח הודעות');
+      return;
+    }
+
+    sendBtn.disabled = true;
+
+    try {
+      var now = new Date().toISOString();
+
+      var result = await supabaseClient
+        .from('private_messages')
+        .insert({
+          id: crypto.randomUUID(),
+          chat_id: chatId,
+          sender_id: s2.id,
+          sender_name: s2.name || 'אורח',
+          content: cText,
+          created_at: now
+        })
+        .select()
+        .single();
+
+      if (result.error) throw result.error;
+
+      // מעדכנים את זמן הפעילות של השיחה
+      var updateResult = await supabaseClient
+        .from('private_chats')
+        .update({
+          last_message_at: now
+        })
+        .eq('id', chatId);
+
+      if (updateResult.error) {
+        console.error('ההודעה נשלחה, אך עדכון זמן השיחה נכשל:', updateResult.error);
+      }
+
+      cInput.value = '';
+
+      // מציגים מיד את ההודעה שנשמרה בשרת,
+      // בלי לטעון מחדש את הצ'אט.
+      var row = result.data;
+
+      if (row) {
+        var sentMessage = {
+          id: row.id,
+          chat_id: row.chat_id,
+          author_guest_id: row.sender_id,
+          author_name: row.sender_name || 'אורח',
+          content: row.content || '',
+          created_date: new Date(row.created_at).getTime()
+        };
+
+        var allMessages = read(KEYS.privateMsgs, []);
+        var exists = allMessages.some(function (m) {
+          return m.id === sentMessage.id;
+        });
+
+        if (!exists) {
+          allMessages.push(sentMessage);
+          write(KEYS.privateMsgs, allMessages);
+        }
+
+        if (view.name === 'chat' && view.id === chatId) {
+          var messagesEl = document.getElementById('messages');
+
+          if (messagesEl) {
+            var empty = messagesEl.querySelector('.empty');
+            if (empty) empty.remove();
+
+            if (!messagesEl.querySelector(
+              '[data-private-message-id="' + sentMessage.id + '"]'
+            )) {
+              var wrapper = document.createElement('div');
+              wrapper.innerHTML = privateMsgHtml(sentMessage);
+
+              var messageEl = wrapper.firstElementChild;
+
+              if (messageEl) {
+                messageEl.setAttribute(
+                  'data-private-message-id',
+                  sentMessage.id
+                );
+
+                messagesEl.appendChild(messageEl);
+                scrollMsgs();
+              }
+            }
+          }
+        }
+      }
+
+    } catch (err) {
+      console.error('שגיאה בשליחת הודעה פרטית:', err);
+
+      alert(
+        'ההודעה לא נשלחה:\n' +
+        (err.message || 'שגיאה לא ידועה')
+      );
+
+    } finally {
+      var currentBtn = document.querySelector(
+        '#chatComposer button[type="submit"]'
+      );
+
+      if (currentBtn) currentBtn.disabled = false;
+    }
+
+    return;
+  }
+});
+
+
+  window.addEventListener('storage', function (e) {
+    if (e.key && e.key.indexOf('stochat_') === 0) render();
+  });
+
+  
+  if (getSession()) {
+  startPresence();
+  loadRoomsFromSupabase();
+} else {
+  render();
+}
+
+})();
+
+</script>
+</body>
+</html>
