@@ -402,7 +402,7 @@ const supabaseClient = window.supabase.createClient(
   const { data, error } = await supabaseClient.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: 'http://127.0.0.1:5501/admin.html',
+      redirectTo: 'https://netzach353-collab.github.io/Stochat/',
       queryParams: {
         access_type: 'offline',
         prompt: 'select_account'
