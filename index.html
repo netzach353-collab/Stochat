@@ -1859,46 +1859,64 @@ async function loadRoomsFromSupabase() {
 }
   
 
+var roomsRefreshOnReturnInstalled = false;
 
-var roomsBroadcastChannel = null;
+function installRoomsRefreshOnReturn() {
+  if (roomsRefreshOnReturnInstalled) return;
+  roomsRefreshOnReturnInstalled = true;
+
+  var wasOffline = !navigator.onLine;
+  var wasHidden = document.hidden;
+
+  window.addEventListener('offline', function () {
+    wasOffline = true;
+  });
+
+  window.addEventListener('online', async function () {
+    if (!wasOffline) return;
+    wasOffline = false;
+
+    if (view && view.name === 'rooms') {
+      await loadRoomsFromSupabase();
+    }
+  });
+
+  document.addEventListener('visibilitychange', async function () {
+    if (document.hidden) {
+      wasHidden = true;
+      return;
+    }
+
+    if (!wasHidden) return;
+    wasHidden = false;
+
+    if (navigator.onLine && view && view.name === 'rooms') {
+      await loadRoomsFromSupabase();
+    }
+  });
+}
+  installRoomsRefreshOnReturn();
+  
+var roomsRealtimeChannel = null;
 
 function listenToRoomsRealtime() {
-  if (roomsBroadcastChannel) return;
+  if (roomsRealtimeChannel) return;
 
-  roomsBroadcastChannel = supabaseClient
-    .channel('rooms-list-broadcast')
+  roomsRealtimeChannel = supabaseClient
+    .channel('rooms-list-realtime')
     .on(
-      'broadcast',
-      { event: 'new-room' },
-      function (message) {
-        var row = message.payload;
-        if (!row || !row.id) return;
-
-        var rooms = read(KEYS.rooms, []);
-
-        if (rooms.some(function (r) {
-          return String(r.id) === String(row.id);
-        })) return;
-
-        rooms.unshift({
-          ...row,
-          created_date: row.created_at
-            ? new Date(row.created_at).getTime()
-            : Date.now(),
-          creator_name: row.creator_name || 'אורח',
-          creator_age: row.creator_age || '',
-          description: row.description || ''
-        });
-
-        write(KEYS.rooms, rooms);
-
-        if (view && view.name === 'rooms') {
-          renderRooms();
-        }
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'rooms'
+      },
+      async function () {
+        await loadRoomsFromSupabase();
       }
     )
     .subscribe(function (status, err) {
-      console.log('האזנת נושאים:', status, err || '');
+      console.log('Realtime של נושאים:', status, err || '');
     });
 }
 
