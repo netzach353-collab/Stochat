@@ -1841,6 +1841,29 @@ async function loadRoomsFromSupabase() {
   
 
 
+var roomsRealtimeChannel = null;
+
+function listenToRoomsRealtime() {
+  if (roomsRealtimeChannel) return;
+
+  roomsRealtimeChannel = supabaseClient
+    .channel('rooms-list-realtime')
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'rooms'
+      },
+      async function () {
+        await loadRoomsFromSupabase();
+      }
+    )
+    .subscribe(function (status, err) {
+      console.log('Realtime של נושאים:', status, err || '');
+    });
+}
+
 var roomMessagesChannel = null;
 var subscribedRoomId = null;
 
@@ -2021,7 +2044,8 @@ function startPresence() {
   if (!me || !me.id) return;
 
   startPrivateNotifications();
-
+listenToRoomsRealtime();
+  
   if (liveChannel) return;
 
 
@@ -2046,6 +2070,7 @@ function startPresence() {
 
       updateLiveUsersList();
       updatePresenceIndicators();
+      
     })
     .subscribe(async status => {
       if (status === 'SUBSCRIBED') {
