@@ -509,6 +509,379 @@ setupAdminTrigger();
   function setSession(s) { write(KEYS.session, s); }
   function clearSession() { localStorage.removeItem(KEYS.session); }
 
+  
+  
+/* ===== התראות והודעות פרטיות שלא נקראו ===== */
+
+var unreadPrivateCount = 0;
+var privateNotificationsChannel = null;
+var privateToastTimer = null;
+
+var PRIVATE_READ_KEY = 'stochat_private_read_at';
+
+function getPrivateReadTimes() {
+  return read(PRIVATE_READ_KEY, {});
+}
+
+
+function updatePrivateBadge() {
+  document.querySelectorAll('[data-nav="private"]').forEach(function (button) {
+    var badge = button.querySelector('#privateUnreadBadge');
+
+    if (unreadPrivateCount > 0) {
+      if (!badge) {
+        badge = document.createElement('span');
+        badge.id = 'privateUnreadBadge';
+        badge.className = 'private-unread-badge';
+        button.appendChild(badge);
+      }
+
+      badge.textContent = unreadPrivateCount > 99
+        ? '99+'
+        : String(unreadPrivateCount);
+
+      badge.style.display = 'inline-flex';
+    } else if (badge) {
+      badge.remove();
+    }
+  });
+}
+
+
+async function refreshUnreadBadge() {
+  var me = getSession();
+  if (!me || !me.id) return;
+
+  try {
+    var chats = await loadPrivateChatsFromSupabase();
+
+    if (!chats.length) {
+      unreadPrivateCount = 0;
+      updatePrivateBadge();
+      return;
+    }
+
+    var chatIds = chats.map(function (chat) {
+      return chat.id;
+    });
+
+    var result = await supabaseClient
+      .from('private_messages')
+      .select('chat_id, sender_id, created_at')
+      .in('chat_id', chatIds);
+
+    if (result.error) throw result.error;
+
+    var readTimes = getPrivateReadTimes();
+    var count = 0;
+
+    (result.data || []).forEach(function (message) {
+      if (String(message.sender_id) === String(me.id)) return;
+
+      var readAt = Number(readTimes[message.chat_id]) || 0;
+      var messageTime = new Date(message.created_at).getTime();
+
+      if (messageTime > readAt) count++;
+    });
+
+    unreadPrivateCount = count;
+    updatePrivateBadge();
+
+  } catch (error) {
+    console.error('שגיאה בחישוב הודעות שלא נקראו:', error);
+  }
+}
+
+async function markPrivateChatAsRead(chatId) {
+  if (!chatId) return;
+
+  var readTimes = getPrivateReadTimes();
+  readTimes[chatId] = Date.now();
+
+  write(PRIVATE_READ_KEY, readTimes);
+
+  await refreshUnreadBadge();
+}
+
+function hidePrivateToast() {
+  if (privateToastTimer) {
+    clearTimeout(privateToastTimer);
+    privateToastTimer = null;
+  }
+
+  var toast = document.getElementById('privateMessageToast');
+  if (!toast) return;
+
+  toast.classList.remove('private-toast-visible');
+
+  setTimeout(function () {
+    if (toast.isConnected) toast.remove();
+  }, 250);
+}
+
+function showPrivateToast(message, chat) {
+  hidePrivateToast();
+
+  var toast = document.createElement('button');
+  toast.type = 'button';
+  toast.id = 'privateMessageToast';
+  toast.className = 'private-toast';
+
+  toast.innerHTML =
+    '<span class="private-toast-icon">' +
+      '✉' +
+    '</span>' +
+    '<span class="private-toast-content">' +
+      '<strong>' + esc(message.author_name || 'משתמש') +
+        ' שלח לך הודעה פרטית</strong>' +
+      '<span>' + esc(message.content || '') + '</span>' +
+    '</span>' +
+    '<span class="private-toast-close">×</span>';
+
+  document.body.appendChild(toast);
+
+  requestAnimationFrame(function () {
+    toast.classList.add('private-toast-visible');
+  });
+
+  var startY = 0;
+
+  toast.addEventListener('pointerdown', function (event) {
+    startY = event.clientY;
+  });
+
+  toast.addEventListener('pointerup', function (event) {
+    if (startY - event.clientY > 35) {
+      hidePrivateToast();
+    }
+  });
+
+  toast.addEventListener('click', function () {
+    hidePrivateToast();
+
+    if (chat && chat.id) {
+      go('chat', chat.id);
+    }
+  });
+
+  privateToastTimer = setTimeout(hidePrivateToast, 3000);
+}
+
+function addPrivateNotificationStyles() {
+  if (document.getElementById('privateNotificationStyles')) return;
+
+  var style = document.createElement('style');
+  style.id = 'privateNotificationStyles';
+
+  style.textContent = `
+    .private-unread-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 19px;
+      height: 19px;
+      padding: 0 5px;
+      margin-inline-start: 6px;
+      border-radius: 50px;
+      background: #ef4444;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 800;
+      line-height: 1;
+      box-shadow: 0 0 0 2px #171426;
+    }
+
+    .private-toast {
+      position: fixed;
+      z-index: 999999;
+      top: 12px;
+      left: 12px;
+      right: 12px;
+      width: calc(100% - 24px);
+      max-width: 480px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px;
+      border: 1px solid #7c3aed;
+      border-radius: 18px;
+      background: linear-gradient(135deg, #211638, #30204c);
+      color: #fff;
+      text-align: right;
+      box-shadow: 0 12px 35px #0008;
+      cursor: pointer;
+      opacity: 0;
+      transform: translateY(-140%);
+      transition: transform .28s ease, opacity .28s ease;
+      touch-action: pan-y;
+    }
+
+    .private-toast.private-toast-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .private-toast-icon {
+      flex: 0 0 42px;
+      width: 42px;
+      height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 14px;
+      background: #7c3aed;
+      font-size: 22px;
+    }
+
+    .private-toast-content {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .private-toast-content strong {
+      font-size: 14px;
+    }
+
+    .private-toast-content span {
+      font-size: 13px;
+      opacity: .82;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+    }
+
+    .private-toast-close {
+      font-size: 23px;
+      opacity: .7;
+    }
+  `;
+
+  document.head.appendChild(style);
+}
+
+async function handleIncomingPrivateMessage(row) {
+  var me = getSession();
+
+  if (!me || !row || !row.id) return;
+  if (String(row.sender_id) === String(me.id)) return;
+
+  try {
+    var result = await supabaseClient
+      .from('private_chats')
+      .select('*')
+      .eq('id', row.chat_id)
+      .maybeSingle();
+
+    if (result.error || !result.data) return;
+
+    var chatRow = result.data;
+
+    if (
+      String(chatRow.user_a) !== String(me.id) &&
+      String(chatRow.user_b) !== String(me.id)
+    ) return;
+
+    var chat = {
+      id: chatRow.id,
+      participants_key: participantsKey(chatRow.user_a, chatRow.user_b),
+      participant_a_guest_id: chatRow.user_a,
+      participant_b_guest_id: chatRow.user_b,
+      participant_a_name: chatRow.user_a_name || 'אורח',
+      participant_b_name: chatRow.user_b_name || 'אורח',
+      participant_a_age: chatRow.user_a_age || '',
+      participant_b_age: chatRow.user_b_age || '',
+      last_message: row.content || '',
+      last_message_at: new Date(row.created_at).getTime(),
+      created_date: new Date(chatRow.created_at).getTime()
+    };
+
+    var cachedChats = read(KEYS.chats, []);
+    var index = cachedChats.findIndex(function (item) {
+      return item.id === chat.id;
+    });
+
+    if (index >= 0) {
+      cachedChats[index] = Object.assign({}, cachedChats[index], chat);
+    } else {
+      cachedChats.push(chat);
+    }
+
+    write(KEYS.chats, cachedChats);
+
+    var currentlyReading =
+      view.name === 'chat' &&
+      String(view.id) === String(chat.id);
+
+    if (currentlyReading) {
+      await markPrivateChatAsRead(chat.id);
+      return;
+    }
+
+    addPrivateNotificationStyles();
+
+    showPrivateToast({
+      author_name: row.sender_name || 'משתמש',
+      content: row.content || ''
+    }, chat);
+
+    await refreshUnreadBadge();
+
+  } catch (error) {
+    console.error('שגיאה בטיפול בהודעה פרטית חדשה:', error);
+  }
+}
+
+function startPrivateNotifications() {
+  var me = getSession();
+
+  if (!me || !me.id) return;
+
+  addPrivateNotificationStyles();
+
+  if (
+    privateNotificationsChannel &&
+    privateNotificationsChannel.userId === String(me.id)
+  ) {
+    return;
+  }
+
+  if (privateNotificationsChannel) {
+    supabaseClient.removeChannel(privateNotificationsChannel);
+    privateNotificationsChannel = null;
+  }
+
+  var channel = supabaseClient
+    .channel('private-notifications-' + me.id)
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'private_messages'
+      },
+      function (payload) {
+        handleIncomingPrivateMessage(payload.new);
+      }
+    )
+    .subscribe(function (status) {
+      if (status === 'SUBSCRIBED') {
+        channel.userId = String(me.id);
+      }
+
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        console.error('שגיאה בהאזנה להתראות פרטיות:', status);
+      }
+    });
+
+  privateNotificationsChannel = channel;
+
+  refreshUnreadBadge();
+}
+
   function seed() {
     if (localStorage.getItem(KEYS.seeded)) return;
     var now = Date.now();
@@ -684,7 +1057,16 @@ function header(active) {
       '</button>' +
       '<nav class="nav">' +
         '<button class="nav-btn' + (active === 'rooms' ? ' active' : '') + '" data-nav="rooms">' + ic('hash', 14) + 'חדרים</button>' +
-        '<button class="nav-btn' + (active === 'private' ? ' active' : '') + '" data-nav="private">' + ic('mail', 14) + 'אישיים</button>' +
+        
+'<button class="nav-btn' + (active === 'private' ? ' active' : '') + '" data-nav="private">' +
+  ic('mail', 14) + 'אישיים' +
+  (unreadPrivateCount > 0
+    ? '<span id="privateUnreadBadge" class="private-unread-badge">' +
+        (unreadPrivateCount > 99 ? '99+' : unreadPrivateCount) +
+      '</span>'
+    : '') +
+'</button>' +
+
       '</nav>' +
       '<div class="user">' +
         '<span class="user-avatar">' + esc(s.name.charAt(0)) + '</span>' +
@@ -1420,8 +1802,13 @@ async function renderPrivateChat(chatId) {
     ? msgs.map(privateMsgHtml).join('')
     : '<div class="empty">התחילו את השיחה...</div>';
 
+  
   scrollMsgs();
+
+  // סימון ההודעות בשיחה כנקראו
+  await markPrivateChatAsRead(chatId);
 }
+
 
   
 
@@ -1628,12 +2015,15 @@ function updatePresenceIndicators() {
   });
 }
 
-  
 function startPresence() {
   const me = getSession();
 
   if (!me || !me.id) return;
+
+  startPrivateNotifications();
+
   if (liveChannel) return;
+
 
   liveChannel = supabaseClient.channel('stochat-live-users', {
     config: {
